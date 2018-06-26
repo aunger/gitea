@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	tplHooks        base.TplName = "repo/settings/webhook/base"
-	tplHookNew      base.TplName = "repo/settings/webhook/new"
+	tplHooks        base.TplName = "repo/settings/hooks"
+	tplHookNew      base.TplName = "repo/settings/hook_new"
 	tplOrgHookNew   base.TplName = "org/settings/hook_new"
 	tplAdminHookNew base.TplName = "admin/hook_new"
 )

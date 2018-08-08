@@ -456,10 +456,10 @@
 			"revisionTime": "2016-06-12T10:09:30Z"
 		},
 		{
-			"checksumSHA1": "7Di9l3MwdZliLqFKCU9ql2s+Rnw=",
+			"checksumSHA1": "RhwgUmK8jkhSn7E0UE2hgMCgb40=",
 			"path": "github.com/go-sql-driver/mysql",
-			"revision": "ce924a41eea897745442daaa1739089b0f3f561d",
-			"revisionTime": "2016-11-01T11:13:14Z"
+			"revision": "99ff426eb706cffe92ff3d058e168b278cabf7c7",
+			"revisionTime": "2018-07-19T07:19:42Z"
 		},
 		{
 			"checksumSHA1": "HsUSlgz1VKEEiZdkXY5qdLzexWU=",

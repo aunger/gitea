@@ -291,6 +291,12 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 	}
 	issue.Repo = ctx.Repo.Repository
 
+	err = issue.LoadAttributes()
+	if err != nil {
+		ctx.Error(500, "LoadAttributes", err)
+		return
+	}
+
 	if !issue.IsPoster(ctx.User.ID) && !ctx.Repo.CanWrite(models.UnitTypeIssues) {
 		ctx.Status(403)
 		return
@@ -316,7 +322,7 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 
 	// Add/delete assignees
 
-	// Deleting is done the Github way (quote from their api documentation):
+	// Deleting is done the GitHub way (quote from their api documentation):
 	// https://developer.github.com/v3/issues/#edit-an-issue
 	// "assignees" (array): Logins for Users to assign to this issue.
 	// Pass one or more user logins to replace the set of assignees on this Issue.

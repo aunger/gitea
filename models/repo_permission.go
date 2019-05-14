@@ -103,6 +103,15 @@ func getUserRepoPermission(e Engine, repo *Repository, user *User) (perm Permiss
 		return
 	}
 
+	if repo.Owner == nil {
+		repo.mustOwner(e)
+	}
+
+	if repo.Owner.IsOrganization() && !HasOrgVisible(repo.Owner, user) {
+		perm.AccessMode = AccessModeNone
+		return
+	}
+
 	if err = repo.getUnits(e); err != nil {
 		return
 	}
@@ -238,7 +247,7 @@ func accessLevelUnit(e Engine, user *User, repo *Repository, unitType UnitType) 
 	if err != nil {
 		return AccessModeNone, err
 	}
-	return perm.UnitAccessMode(UnitTypeCode), nil
+	return perm.UnitAccessMode(unitType), nil
 }
 
 func hasAccessUnit(e Engine, user *User, repo *Repository, unitType UnitType, testMode AccessMode) (bool, error) {

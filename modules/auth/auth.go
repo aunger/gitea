@@ -1,4 +1,5 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
+// Copyright 2019 The Gitea Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -7,6 +8,7 @@ package auth
 import (
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/Unknwon/com"
 	"github.com/go-macaron/binding"
@@ -44,7 +46,7 @@ func SignedInID(ctx *macaron.Context, sess session.Store) int64 {
 			auHead := ctx.Req.Header.Get("Authorization")
 			if len(auHead) > 0 {
 				auths := strings.Fields(auHead)
-				if len(auths) == 2 && auths[0] == "token" {
+				if len(auths) == 2 && (auths[0] == "token" || strings.ToLower(auths[0]) == "bearer") {
 					tokenSHA = auths[1]
 				}
 			}
@@ -52,6 +54,13 @@ func SignedInID(ctx *macaron.Context, sess session.Store) int64 {
 
 		// Let's see if token is valid.
 		if len(tokenSHA) > 0 {
+			if strings.Contains(tokenSHA, ".") {
+				uid := CheckOAuthAccessToken(tokenSHA)
+				if uid != 0 {
+					ctx.Data["IsApiToken"] = true
+				}
+				return uid
+			}
 			t, err := models.GetAccessTokenBySHA(tokenSHA)
 			if err != nil {
 				if models.IsErrAccessTokenNotExist(err) || models.IsErrAccessTokenEmpty(err) {
@@ -75,6 +84,30 @@ func SignedInID(ctx *macaron.Context, sess session.Store) int64 {
 		return id
 	}
 	return 0
+}
+
+// CheckOAuthAccessToken returns uid of user from oauth token token
+func CheckOAuthAccessToken(accessToken string) int64 {
+	// JWT tokens require a "."
+	if !strings.Contains(accessToken, ".") {
+		return 0
+	}
+	token, err := models.ParseOAuth2Token(accessToken)
+	if err != nil {
+		log.Trace("ParseOAuth2Token", err)
+		return 0
+	}
+	var grant *models.OAuth2Grant
+	if grant, err = models.GetOAuth2GrantByID(token.GrantID); err != nil || grant == nil {
+		return 0
+	}
+	if token.Type != models.TypeAccessToken {
+		return 0
+	}
+	if token.ExpiresAt < time.Now().Unix() || token.IssuedAt > time.Now().Unix() {
+		return 0
+	}
+	return grant.UserID
 }
 
 // SignedInUser returns the user object of signed user.
@@ -147,6 +180,18 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (*models.User, bool)
 				// Assume password is token
 				authToken = passwd
 			}
+
+			uid := CheckOAuthAccessToken(authToken)
+			if uid != 0 {
+				var err error
+				ctx.Data["IsApiToken"] = true
+
+				u, err = models.GetUserByID(uid)
+				if err != nil {
+					log.Error(4, "GetUserByID:  %v", err)
+					return nil, false
+				}
+			}
 			token, err := models.GetAccessTokenBySHA(authToken)
 			if err == nil {
 				if isUsernameToken {
@@ -183,9 +228,10 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (*models.User, bool)
 					}
 					return nil, false
 				}
+			} else {
+				ctx.Data["IsApiToken"] = true
 			}
 
-			ctx.Data["IsApiToken"] = true
 			return u, true
 		}
 	}
